@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"log"
@@ -36,19 +37,46 @@ type Kekong struct {
 	D6   float64 `json:"d6"`
 }
 
+type Forecast struct {
+	Time int
+	Data []Forecast2
+}
+
+type Forecast2 struct {
+	Time        string
+	Temperature string
+	Humidity    string
+	Wind        string
+}
+
 // 获取气象实时数据的请求
 func GetData(c *gin.Context) {
 	index := c.Query("index")
 	base := c.Query("base")
 	zutuan := c.Query("zutuan")
 
-	base2, _ := strconv.Atoi(base)
+	if index == "predict" {
+		a := getPredict()
+		c.String(http.StatusOK, a)
+	} else {
+		base2, _ := strconv.Atoi(base)
+		a := getData2(index, base2, zutuan)
+		c.JSON(http.StatusOK, gin.H{
+			"data": a,
+		})
+	}
+}
 
-	a := getData2(index, base2, zutuan)
-
-	c.JSON(http.StatusOK, gin.H{
-		"data": a,
-	})
+func getPredict() string {
+	now := int(time.Now().Unix())
+	var devices []Forecast
+	data, _ := model.Db.Collection("weatherForecast").Find(context.TODO(), bson.M{"time": bson.M{"$gte": now - 3600, "$lt": now}})
+	err := data.All(context.TODO(), &devices)
+	if err != nil {
+		log.Println(err)
+	}
+	a, _ := json.Marshal(devices[len(devices)-1])
+	return string(a)
 }
 
 func getData2(index string, base int, zutuan string) []float64 {
