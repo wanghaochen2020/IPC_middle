@@ -14,8 +14,8 @@ import (
 )
 
 type Atmosphere struct {
-	Time   int         `json:"time"`
-	Result Atmosphere2 `json:"data"`
+	Time int         `json:"time"`
+	Data Atmosphere2 `json:"data"`
 }
 
 type Atmosphere2 struct {
@@ -50,6 +50,7 @@ type Forecast2 struct {
 }
 
 // 获取气象实时数据的请求
+// index:气象四个,roomrate,predict,7d
 func GetData(c *gin.Context) {
 	index := c.Query("index")
 	base := c.Query("base")
@@ -58,6 +59,8 @@ func GetData(c *gin.Context) {
 	if index == "predict" {
 		a := getPredict()
 		c.String(http.StatusOK, a)
+	} else if index == "7d" {
+
 	} else {
 		base2, _ := strconv.Atoi(base)
 		a := getData2(index, base2, zutuan)
@@ -70,7 +73,7 @@ func GetData(c *gin.Context) {
 func getPredict() string {
 	now := int(time.Now().Unix())
 	var devices []Forecast
-	data, _ := model.Db.Collection("weatherForecast").Find(context.TODO(), bson.M{"time": bson.M{"$gte": now - 3600, "$lt": now}})
+	data, _ := model.Db.Collection("weatherForecast").Find(context.TODO(), bson.M{"time": bson.M{"$gte": now - 3600, "$lt": now}}) //获取最新的天气预报
 	err := data.All(context.TODO(), &devices)
 	if err != nil {
 		log.Println(err)
@@ -123,22 +126,29 @@ func getData2(index string, base int, zutuan string) []float64 {
 			log.Println(err)
 		}
 		if index == "temperature" {
-			for i := 0; i < 24; i++ {
-				array[i], _ = strconv.ParseFloat(devices[i].Result.Temperature.Value, 64)
+			for i := 0; i < len(devices); i++ {
+				array[i], _ = strconv.ParseFloat(devices[i].Data.Temperature.Value, 64)
 			}
 		} else if index == "humidity" {
-			for i := 0; i < 24; i++ {
-				array[i], _ = strconv.ParseFloat(devices[i].Result.Humidity.Value, 64)
+			for i := 0; i < len(devices); i++ {
+				array[i], _ = strconv.ParseFloat(devices[i].Data.Humidity.Value, 64)
 			}
 		} else if index == "radiation" {
-			for i := 0; i < 24; i++ {
-				array[i], _ = strconv.ParseFloat(devices[i].Result.Radiation.Value, 64)
+			for i := 0; i < len(devices); i++ {
+				array[i], _ = strconv.ParseFloat(devices[i].Data.Radiation.Value, 64)
 			}
 		} else if index == "wind" {
-			for i := 0; i < 24; i++ {
-				array[i], _ = strconv.ParseFloat(devices[i].Result.Wind.Value, 64)
+			for i := 0; i < len(devices); i++ {
+				array[i], _ = strconv.ParseFloat(devices[i].Data.Wind.Value, 64)
 			}
 		}
+
+		if len(devices) < 24 {
+			for i := len(devices); i < 24; i++ {
+				array[i] = 0
+			}
+		}
+
 	}
 
 	return array
