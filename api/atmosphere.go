@@ -60,7 +60,10 @@ func GetData(c *gin.Context) {
 		a := getPredict()
 		c.String(http.StatusOK, a)
 	} else if index == "7d" {
-
+		a := Get7d()
+		c.JSON(http.StatusOK, gin.H{
+			"data": a,
+		})
 	} else {
 		base2, _ := strconv.Atoi(base)
 		a := getData2(index, base2, zutuan)
@@ -68,6 +71,30 @@ func GetData(c *gin.Context) {
 			"data": a,
 		})
 	}
+}
+
+func Get7d() []float64 {
+	now := int(time.Now().Unix())
+	var devices []Forecast
+	data, _ := model.Db.Collection("weatherForecast").Find(context.TODO(), bson.M{"time": bson.M{"$gte": now - 3600, "$lt": now}}) //获取最新的天气预报
+	err := data.All(context.TODO(), &devices)
+	if err != nil {
+		log.Println(err)
+	}
+
+	var result []float64
+	result = make([]float64, 7)
+	var sum float64
+	for i := 0; i < 7; i++ {
+		sum = 0
+		for j := 0; j < 24; j++ {
+			a, _ := strconv.ParseFloat(devices[0].Data[i*24+j].Temperature, 64)
+			sum += a
+		}
+		result[i] = sum / 24
+	}
+
+	return result
 }
 
 func getPredict() string {
