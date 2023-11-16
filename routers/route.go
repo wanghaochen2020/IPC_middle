@@ -7,5 +7,5 @@ import (
 
 // 中转路由
 func DeviceRouter(router *gin.Engine) {
-	router.GET("api/getData", api.GetData)
+	router.GET("api/getData", api.GetData) //
 }

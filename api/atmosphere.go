@@ -50,7 +50,7 @@ type Forecast2 struct {
 }
 
 // 获取气象实时数据的请求
-// index:气象四个,roomrate,predict,7d
+// index:气象四个,roomrate,predict,atmo,kekong
 func GetData(c *gin.Context) {
 	index := c.Query("index")
 	base := c.Query("base")
@@ -59,11 +59,12 @@ func GetData(c *gin.Context) {
 	if index == "predict" {
 		a := getPredict()
 		c.String(http.StatusOK, a)
-	} else if index == "7d" {
-		a := Get7d()
-		c.JSON(http.StatusOK, gin.H{
-			"data": a,
-		})
+	} else if index == "atmo" {
+		a := getAtmo()
+		c.String(http.StatusOK, a)
+	} else if index == "kekong" {
+		a := getKekong()
+		c.String(http.StatusOK, a)
 	} else {
 		base2, _ := strconv.Atoi(base)
 		a := getData2(index, base2, zutuan)
@@ -73,7 +74,7 @@ func GetData(c *gin.Context) {
 	}
 }
 
-func Get7d() []float64 {
+func getPredict() string {
 	now := int(time.Now().Unix())
 	var devices []Forecast
 	data, _ := model.Db.Collection("weatherForecast").Find(context.TODO(), bson.M{"time": bson.M{"$gte": now - 3600, "$lt": now}}) //获取最新的天气预报
@@ -81,26 +82,26 @@ func Get7d() []float64 {
 	if err != nil {
 		log.Println(err)
 	}
-
-	var result []float64
-	result = make([]float64, 7)
-	var sum float64
-	for i := 0; i < 7; i++ {
-		sum = 0
-		for j := 0; j < 24; j++ {
-			a, _ := strconv.ParseFloat(devices[0].Data[i*24+j].Temperature, 64)
-			sum += a
-		}
-		result[i] = sum / 24
-	}
-
-	return result
+	a, _ := json.Marshal(devices[len(devices)-1])
+	return string(a)
 }
 
-func getPredict() string {
+func getAtmo() string {
 	now := int(time.Now().Unix())
-	var devices []Forecast
-	data, _ := model.Db.Collection("weatherForecast").Find(context.TODO(), bson.M{"time": bson.M{"$gte": now - 3600, "$lt": now}}) //获取最新的天气预报
+	var devices []Atmosphere
+	data, _ := model.Db.Collection("atmosphere").Find(context.TODO(), bson.M{"time": bson.M{"$gte": now - 3600, "$lt": now}}) //获取最新的
+	err := data.All(context.TODO(), &devices)
+	if err != nil {
+		log.Println(err)
+	}
+	a, _ := json.Marshal(devices[len(devices)-1])
+	return string(a)
+}
+
+func getKekong() string {
+	now := int(time.Now().Unix())
+	var devices []Kekong
+	data, _ := model.Db.Collection("keKong").Find(context.TODO(), bson.M{"time": bson.M{"$gte": now - 3600, "$lt": now}}) //获取最新的
 	err := data.All(context.TODO(), &devices)
 	if err != nil {
 		log.Println(err)
